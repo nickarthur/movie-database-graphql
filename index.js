@@ -98,6 +98,7 @@ app.use(
 app.use("/graphiql", graphiqlExpress({ endpointURL: "/graphql" }));
 
 // Start the server
-app.listen(3000, () => {
-  console.log("Go to http://localhost:3000/graphiql to run queries!");
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Go to http://localhost:${PORT}/graphiql to run queries!`);
 });
