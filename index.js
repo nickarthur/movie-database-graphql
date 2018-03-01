@@ -80,6 +80,10 @@ const schema = makeExecutableSchema({
 // Initialize the app
 const app = express();
 
+if (! process.env.TMDB_API_KEY) {
+  throw new Error('Please provide an API key for themoviedb.org in the environment variable TMDB_API_KEY.')
+}
+
 // The GraphQL endpoint
 app.use(
   "/graphql",
