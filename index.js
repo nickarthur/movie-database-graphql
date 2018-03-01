@@ -4,43 +4,33 @@ const { graphqlExpress, graphiqlExpress } = require("apollo-server-express");
 const { makeExecutableSchema } = require("graphql-tools");
 const fetch = require("node-fetch");
 const cors = require("cors");
-
-// Some fake data
-const books = [
-  {
-    title: "Harry Potter and the Sorcerer's stone",
-    author: "J.K. Rowling"
-  },
-  {
-    title: "Jurassic Park",
-    author: "Michael Crichton"
-  }
-];
+const compression = require("compression");
+const { Engine } = require("apollo-engine");
 
 const TMDB_API_PATH = "https://api.themoviedb.org/3";
 
 // Construct a schema, using GraphQL schema language
 const typeDefs = `
-  type Query {
+  type Query @cacheControl(maxAge: 3600) {
     movies(query: String!): [Movie]
     config: Config
     movie(id: Int!): Movie
   }
 
-  type Movie {
+  type Movie @cacheControl(maxAge: 3600) {
 		id: Int
     title: String
     poster_path: String
     overview: String
   }
 
-	type Images {
+	type Images @cacheControl(maxAge: 3600) {
   	poster_sizes: [String]
 		base_url: String
 		secure_base_url: String
 	}
 
-  type Config {
+  type Config @cacheControl(maxAge: 3600) {
 		images: Images
 	}
 
@@ -87,7 +77,37 @@ if (!process.env.TMDB_API_KEY) {
   );
 }
 
+if (!process.env.ENGINE_API_KEY) {
+  throw new Error(
+    "Please provide an API key for themoviedb.org in the environment variable ENGINE_API_KEY."
+  );
+}
+
+const PORT = process.env.PORT || 3000;
+
+const engine = new Engine({
+  engineConfig: {
+    apiKey: process.env.ENGINE_API_KEY,
+    stores: [
+      {
+        name: "publicResponseCache",
+        inMemory: {
+          cacheSize: 10485760
+        }
+      }
+    ],
+    queryCache: {
+      publicFullQueryStore: "publicResponseCache"
+    }
+  },
+  graphqlPort: PORT
+});
+
+engine.start();
+app.use(engine.expressMiddleware());
+
 app.use(cors());
+app.use(compression());
 
 // The GraphQL endpoint
 app.use(
@@ -95,6 +115,8 @@ app.use(
   bodyParser.json(),
   graphqlExpress({
     schema,
+    tracing: true,
+    cacheControl: true,
     context: {
       secrets: {
         TMDB_API_KEY: process.env.TMDB_API_KEY
@@ -109,7 +131,6 @@ app.use("/graphiql", graphiqlExpress({ endpointURL: "/graphql" }));
 app.use(express.static("public"));
 
 // Start the server
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Go to http://localhost:${PORT}/graphiql to run queries!`);
 });
