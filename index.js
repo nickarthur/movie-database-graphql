@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const { graphqlExpress, graphiqlExpress } = require("apollo-server-express");
 const { makeExecutableSchema } = require("graphql-tools");
 const fetch = require("node-fetch");
+const cors = require("cors");
 
 // Some fake data
 const books = [
@@ -80,9 +81,13 @@ const schema = makeExecutableSchema({
 // Initialize the app
 const app = express();
 
-if (! process.env.TMDB_API_KEY) {
-  throw new Error('Please provide an API key for themoviedb.org in the environment variable TMDB_API_KEY.')
+if (!process.env.TMDB_API_KEY) {
+  throw new Error(
+    "Please provide an API key for themoviedb.org in the environment variable TMDB_API_KEY."
+  );
 }
+
+app.use(cors());
 
 // The GraphQL endpoint
 app.use(
@@ -101,7 +106,7 @@ app.use(
 // GraphiQL, a visual editor for queries
 app.use("/graphiql", graphiqlExpress({ endpointURL: "/graphql" }));
 
-app.use(express.static('public'))
+app.use(express.static("public"));
 
 // Start the server
 const PORT = process.env.PORT || 3000;
